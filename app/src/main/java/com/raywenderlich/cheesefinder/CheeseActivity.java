@@ -23,6 +23,8 @@
 package com.raywenderlich.cheesefinder;
 
 
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 
 import java.util.List;
@@ -30,7 +32,6 @@ import java.util.List;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
-import io.reactivex.Scheduler;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Cancellable;
 import io.reactivex.functions.Consumer;
@@ -39,11 +40,64 @@ import io.reactivex.schedulers.Schedulers;
 
 public class CheeseActivity extends BaseSearchActivity {
 
-    protected void onStart(){
+
+    /** Using a Button as a search observable..*/
+//    protected void onStart(){
+//        super.onStart();
+//        Observable<String> searchTextObservable = createButtonClickObservable();
+//
+//        searchTextObservable
+//
+//                // First - Ensure that the next operator in chain will be run on the main thread.
+//                .observeOn(AndroidSchedulers.mainThread())
+//                // Add the doOnNext operator so that showProgressBar() will be called every time a new item is emitted.
+//                .doOnNext(new Consumer<String>() {
+//                    @Override
+//                    public void accept(String s) throws Exception {
+//                        showProgressBar();
+//                    }
+//                })
+//                //First, specify that the next operator should be called on the I/O thread.
+//                .observeOn(Schedulers.io())
+//                // For each search query, you return a list of results.
+//                .map(new Function<String, List<String>>() {
+//                    @Override
+//                    public List<String> apply(String result) throws Exception {
+//                        return mCheeseSearchEngine.search(result);
+//                    }
+//                })
+//                // Finally, specify that code down the chain should be executed on the main thread instead of on the I/O thread.
+//                // In Android, all code that works with Views should execute on the main thread.
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe(new Consumer<List<String>>() {
+//                    @Override
+//                    public void accept(List<String> results) throws Exception {
+//                        //Don’t forget to call hideProgressBar() when you are just about to display a result.
+//                        hideProgressBar();
+//                        showResult(results);
+//                    }
+//                });
+//
+//
+//    }
+
+
+    /** Observe Text Changes, perform search automatically when the user types some text */
+        protected void onStart(){
         super.onStart();
-        Observable<String> searchTextObservable = createButtonClickObservable();
+        Observable<String> searchTextObservable = createTextChangeObservable();
 
         searchTextObservable
+
+                // First - Ensure that the next operator in chain will be run on the main thread.
+                .observeOn(AndroidSchedulers.mainThread())
+                // Add the doOnNext operator so that showProgressBar() will be called every time a new item is emitted.
+                .doOnNext(new Consumer<String>() {
+                    @Override
+                    public void accept(String s) throws Exception {
+                        showProgressBar();
+                    }
+                })
                 //First, specify that the next operator should be called on the I/O thread.
                 .observeOn(Schedulers.io())
                 // For each search query, you return a list of results.
@@ -59,6 +113,8 @@ public class CheeseActivity extends BaseSearchActivity {
                 .subscribe(new Consumer<List<String>>() {
                     @Override
                     public void accept(List<String> results) throws Exception {
+                        //Don’t forget to call hideProgressBar() when you are just about to display a result.
+                        hideProgressBar();
                         showResult(results);
                     }
                 });
@@ -91,6 +147,51 @@ public class CheeseActivity extends BaseSearchActivity {
                 });
             }
         });
+    }
+
+    // Declare a method that will return an observable for text changes.
+    private Observable<String> createTextChangeObservable(){{
+
+        // Create textChangeObservable with create(), which takes an ObservableOnSubscribe.
+        Observable<String> textChangeObservable = Observable.create(new ObservableOnSubscribe<String>() {
+            @Override
+            public void subscribe(final ObservableEmitter<String> emitter) throws Exception {
+
+                // When an observer makes a subscription, the first thing to do is to create a TextWatcher.
+                final TextWatcher watcher = new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence charSequence, int start, int count, int after) {
+
+                    }
+
+                    // You aren’t interested in beforeTextChanged() and afterTextChanged().
+                    // When the user types and onTextChanged() triggers, you pass the new text value to an observer.
+                    @Override
+                    public void onTextChanged(CharSequence charSequence, int start, int before, int count) {
+                        emitter.onNext(charSequence.toString());
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable editable) {
+
+                    }
+                };
+                // Add the watcher to your TextView by calling addTextChangedListener().
+                mQueryEditText.addTextChangedListener(watcher);
+
+                // Don’t forget to remove your watcher. To do this, call emitter.setCancellable() and overwrite cancel() to call removeTextChangedListener()
+                emitter.setCancellable(new Cancellable() {
+                    @Override
+                    public void cancel() throws Exception {
+                        mQueryEditText.removeTextChangedListener(watcher);
+                    }
+                });
+            }
+        });
+        // Finally, return the created observable.
+        return textChangeObservable;
+
+    }
     }
 
 }
