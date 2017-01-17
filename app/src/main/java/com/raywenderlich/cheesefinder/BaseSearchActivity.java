@@ -33,6 +33,7 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -70,13 +71,15 @@ public abstract class BaseSearchActivity extends AppCompatActivity {
     mProgressBar.setVisibility(View.GONE);
   }
 
-  protected void showResult(List<String> result) {
-    if (result.isEmpty()) {
-      Toast.makeText(this, R.string.nothing_found, Toast.LENGTH_SHORT).show();
-      mAdapter.setCheeses(Collections.<String>emptyList());
-    } else {
-      mAdapter.setCheeses(result);
+    protected void showResult(List<String> result) {
+
+        if (result.isEmpty()) {
+            Toast.makeText(this, R.string.nothing_found, Toast.LENGTH_SHORT).show();
+            mAdapter.setCheeses(Collections.<String>emptyList());
+
+        } else {
+            mAdapter.setCheeses(result);
+        }
     }
-  }
 
 }
